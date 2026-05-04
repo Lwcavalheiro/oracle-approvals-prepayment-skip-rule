@@ -1,0 +1,55 @@
+# Skip Rule Expression
+# Participant: SoaOLabel.InvoiceApproversParallelParticipantinPar
+# Tab: Advanced > Specify skip rule
+# Module: Oracle ERP Fusion Payables – Invoice Approval Workflow
+#
+# PURPOSE:
+#   Returns TRUE  → skip this approver (no open prepayment found for vendor)
+#   Returns FALSE → keep this approver active (vendor has an open prepayment)
+#
+# Paste the single-line version into the BPM Worklist "Specify skip rule" field.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── SINGLE-LINE VERSION (paste into BPM Worklist UI) ─────────────────────────
+
+orcl:query-database(concat('SELECT COUNT(AD.INVOICE_ID) TOTAL FROM AP_INVOICES_ALL AIA,AP_INVOICES_ALL AD WHERE 1=1 AND AIA.VENDOR_SITE_ID = AD.VENDOR_SITE_ID AND AD.INVOICE_TYPE_LOOKUP_CODE = ''PREPAYMENT'' AND AD.PAYMENT_STATUS_FLAG = ''Y'' AND AD.APPROVAL_STATUS = ''AVAILABLE'' AND AD.CANCELLED_DATE IS NULL AND AIA.INVOICE_ID=',/task:task/task:identificationKey), true(), true(),'jdbc/ApplicationDBDS')=0
+
+
+# ── FORMATTED VERSION (for readability / documentation only) ─────────────────
+
+orcl:query-database(
+  concat(
+    'SELECT COUNT(AD.INVOICE_ID) TOTAL
+     FROM AP_INVOICES_ALL AIA,
+          AP_INVOICES_ALL AD
+     WHERE 1=1
+       AND AIA.VENDOR_SITE_ID    = AD.VENDOR_SITE_ID
+       AND AD.INVOICE_TYPE_LOOKUP_CODE = ''PREPAYMENT''
+       AND AD.PAYMENT_STATUS_FLAG      = ''Y''
+       AND AD.APPROVAL_STATUS          = ''AVAILABLE''
+       AND AD.CANCELLED_DATE IS NULL
+       AND AIA.INVOICE_ID = ',
+    /task:task/task:identificationKey
+  ),
+  true(),   -- isQuery
+  true(),   -- returnsSingleRow
+  'jdbc/ApplicationDBDS'
+) = 0
+
+
+# ── PARAMETER REFERENCE ──────────────────────────────────────────────────────
+#
+#  orcl:query-database(sqlExpression, isQuery, returnsSingleRow, dataSource)
+#
+#  sqlExpression     : XPath concat() building the SQL string with the invoice ID
+#  isQuery           : true  = SELECT statement
+#  returnsSingleRow  : true  = expect a single scalar value back
+#  dataSource        : 'jdbc/ApplicationDBDS' — standard Fusion Payables JNDI
+#
+#  /task:task/task:identificationKey
+#                    : XPath to the current invoice's ID from the workflow context
+#
+# ── LOGIC SUMMARY ────────────────────────────────────────────────────────────
+#
+#  COUNT = 0  →  expression evaluates to TRUE  →  SKIP the approver
+#  COUNT > 0  →  expression evaluates to FALSE →  ACTIVATE the approver
